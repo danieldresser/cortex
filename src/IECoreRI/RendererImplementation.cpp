@@ -431,24 +431,73 @@ void IECoreRI::RendererImplementation::camera( const std::string &name, const IE
 	ConstV2fDataPtr shutterD = runTimeCast<const V2fData>( it->second );
 	RiShutter( shutterD->readable()[0], shutterD->readable()[1] );
 
-	// then format
+	// Read format and screen window
 	it = camera->parameters().find( "resolution" );
-	ConstV2iDataPtr d = runTimeCast<const V2iData>( it->second );
+	V2i resolution = runTimeCast<const V2iData>( it->second )->readable();
+
+	it = camera->parameters().find( "screenWindow" );
+	Box2f screenWindow = runTimeCast<const Box2fData>( it->second )->readable();
+
+
+	// Apply render region
+	it = camera->parameters().find( "renderRegion" );
+	if( it != camera->parameters().end() )
+	{
+		const Box2i& renderRegion = runTimeCast<const Box2iData>( it->second )->readable();
+	
+		const V2i minPixelOffset(
+			max( 0, -renderRegion.min.x),
+			max( 0, -renderRegion.min.y)
+		);
+
+		const V2i maxPixelOffset(
+			max( 0, renderRegion.max.x - ( resolution.x - 1 ) ),
+			max( 0, renderRegion.max.y - ( resolution.y - 1 ) )
+		);
+
+		const V2f minOffset(
+			(float)minPixelOffset.x / (float)resolution.x,
+			(float)minPixelOffset.y / (float)resolution.y
+		);
+
+		const V2f maxOffset(
+			(float)maxPixelOffset.x / (float)resolution.x,
+			(float)maxPixelOffset.y / (float)resolution.y
+		);
+
+		Box2i overscanRegion(
+			-minPixelOffset,
+			resolution - V2i( 1, 1 ) + maxPixelOffset
+		);
+		resolution = overscanRegion.size() + V2i(1, 1);
+
+		const Box2f originalScreenWindow = screenWindow;
+		screenWindow.min -= originalScreenWindow.size() * minOffset;
+		screenWindow.max += originalScreenWindow.size() * maxOffset;
+
+		RiCropWindow(
+			float( renderRegion.min.x - overscanRegion.min.x ) / float( resolution.x ),
+			float( renderRegion.max.x + 1 - overscanRegion.min.x ) / float( resolution.x ),
+			float( renderRegion.min.y - overscanRegion.min.y ) / float( resolution.y ),
+			float( renderRegion.max.y + 1 - overscanRegion.min.y ) / float( resolution.y ) );
+	
+	}
+	else
+	{
+		// then crop window
+		it = camera->parameters().find( "cropWindow" );
+		ConstBox2fDataPtr cropWindowD = runTimeCast<const Box2fData>( it->second );
+		RiCropWindow( cropWindowD->readable().min.x, cropWindowD->readable().max.x, cropWindowD->readable().min.y, cropWindowD->readable().max.y );
+	}
+
+	// Output format and screen window
 	RiFormat(
-		d->readable().x,
-		d->readable().y,
+		resolution.x,
+		resolution.y,
 		camera->parametersData()->member<FloatData>( "pixelAspectRatio" )->readable()
 	);
 
-	// then screen window
-	it = camera->parameters().find( "screenWindow" );
-	ConstBox2fDataPtr screenWindowD = runTimeCast<const Box2fData>( it->second );
-	RiScreenWindow( screenWindowD->readable().min.x, screenWindowD->readable().max.x, screenWindowD->readable().min.y, screenWindowD->readable().max.y );
-
-	// then crop window
-	it = camera->parameters().find( "cropWindow" );
-	ConstBox2fDataPtr cropWindowD = runTimeCast<const Box2fData>( it->second );
-	RiCropWindow( cropWindowD->readable().min.x, cropWindowD->readable().max.x, cropWindowD->readable().min.y, cropWindowD->readable().max.y );
+	RiScreenWindow( screenWindow.min.x, screenWindow.max.x, screenWindow.min.y, screenWindow.max.y );
 
 	// then clipping
 	it = camera->parameters().find( "clippingPlanes" );

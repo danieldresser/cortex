@@ -921,6 +921,8 @@ void IECoreAppleseed::RendererImplementation::setCamera( const string &name, Cam
 	asr::ParamArray params = m_project->get_frame()->get_parameters();
 	m_project->set_frame( asr::FrameFactory().create( "beauty", params ) );
 
+
+	// TODO - swap to renderRegion.  What about overscan?
 	// crop window
 	const Box2fData *cropWindow = cortexCamera->parametersData()->member<Box2fData>( "cropWindow" );
 	asf::AABB2u crop;

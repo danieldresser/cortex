@@ -67,6 +67,81 @@ class CameraTest( IECoreRI.TestCase ) :
 		self.assert_( "Projection \"perspective\" \"float fov\" [ 45 ]" in l )
 		self.assert_( "Shutter 0 0.1" in l )
 
+	def testDefaultRenderRegion( self ) :
+
+		r = IECoreRI.Renderer( "test/IECoreRI/output/testCamera.rib" )
+
+		r.camera( "main", {
+			"resolution" : IECore.V2iData( IECore.V2i( 1024, 200 ) ),
+			"screenWindow" : IECore.Box2fData( IECore.Box2f( IECore.V2f( -1 ), IECore.V2f( 1 ) ) ),
+			# This crop should be ignored because renderRegion overrides it
+			"cropWindow" : IECore.Box2fData( IECore.Box2f( IECore.V2f( 0.1, 0.1 ), IECore.V2f( 0.9, 0.9 ) ) ),
+			"renderRegion" : IECore.Box2iData( IECore.Box2i( IECore.V2i( 0, 0 ), IECore.V2i( 1023, 199 ) ) ),
+			"clippingPlanes" : IECore.V2fData( IECore.V2f( 1, 1000 ) ),
+			"projection" : IECore.StringData( "perspective" ),
+			"projection:fov" : IECore.FloatData( 45 ),
+			"shutter" : IECore.V2fData( IECore.V2f( 0, 0.1 ) ),
+		} )
+
+		r.worldBegin()
+		r.worldEnd()
+
+		l = "".join( file( "test/IECoreRI/output/testCamera.rib" ).readlines() )
+		l = " ".join( l.split() )
+
+		self.assert_( "Format 1024 200 1 " in l )
+		self.assert_( "ScreenWindow -1 1 -1 1" in l )
+		self.assert_( "CropWindow 0 1 0 1" in l )
+
+	def testCroppedRenderRegion( self ) :
+
+		r = IECoreRI.Renderer( "test/IECoreRI/output/testCamera.rib" )
+
+		r.camera( "main", {
+			"resolution" : IECore.V2iData( IECore.V2i( 1024, 200 ) ),
+			"screenWindow" : IECore.Box2fData( IECore.Box2f( IECore.V2f( -1 ), IECore.V2f( 1 ) ) ),
+			"renderRegion" : IECore.Box2iData( IECore.Box2i( IECore.V2i( 512, 30 ), IECore.V2i( 1023, 169 ) ) ),
+			"clippingPlanes" : IECore.V2fData( IECore.V2f( 1, 1000 ) ),
+			"projection" : IECore.StringData( "perspective" ),
+			"projection:fov" : IECore.FloatData( 45 ),
+			"shutter" : IECore.V2fData( IECore.V2f( 0, 0.1 ) ),
+		} )
+
+		r.worldBegin()
+		r.worldEnd()
+
+		l = "".join( file( "test/IECoreRI/output/testCamera.rib" ).readlines() )
+		l = " ".join( l.split() )
+
+		self.assert_( "Format 1024 200 1 " in l )
+		self.assert_( "ScreenWindow -1 1 -1 1" in l )
+		self.assert_( "CropWindow 0.5 1 0.15 0.85" in l )
+
+	def testOverscanRenderRegion( self ) :
+
+		r = IECoreRI.Renderer( "test/IECoreRI/output/testCamera.rib" )
+
+		r.camera( "main", {
+			"resolution" : IECore.V2iData( IECore.V2i( 1024, 200 ) ),
+			"screenWindow" : IECore.Box2fData( IECore.Box2f( IECore.V2f( -1 ), IECore.V2f( 1 ) ) ),
+			"renderRegion" : IECore.Box2iData( IECore.Box2i( IECore.V2i( -512, -10 ), IECore.V2i( 1279, 209 ) ) ),
+			"clippingPlanes" : IECore.V2fData( IECore.V2f( 1, 1000 ) ),
+			"projection" : IECore.StringData( "perspective" ),
+			"projection:fov" : IECore.FloatData( 45 ),
+			"shutter" : IECore.V2fData( IECore.V2f( 0, 0.1 ) ),
+		} )
+
+		r.worldBegin()
+		r.worldEnd()
+
+		l = "".join( file( "test/IECoreRI/output/testCamera.rib" ).readlines() )
+		print l
+		l = " ".join( l.split() )
+
+		self.assert_( "Format 1792 220 1 " in l )
+		self.assert_( "ScreenWindow -2 1.5 -1.1 1.1" in l )
+		self.assert_( "CropWindow 0 1 0 1" in l )
+
 	def testPositioning( self ) :
 
 		# render a plane at z = 0 with the default camera

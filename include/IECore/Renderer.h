@@ -149,9 +149,16 @@ class IECORE_API Renderer : public RunTimeTyped
 		/// dimension should be sized appropriately to preserve pixel aspect ratio.
 		///
 		/// \li <b>"cropWindow" Box2fData</b><br>
+		/// DEPRECATED in favour of "renderRegion"
 		/// The region in raster space which should actually be rendered - this allows just
 		/// a section of the full resolution to be rendered. Note that raster space runs from
 		/// 0,0 at the top left to 1,1 at the bottom right. Defaults to 0,0 1,1 if not specified.
+		//
+		/// \li <b>"renderRegion" Box2iData</b><br>
+		/// The pixel indices of the region to render.  The default is 0,0 to
+		///	resolution.x - 1, resolution.y - 1, which covers the rectangle specified by resolution.
+		/// Regions smaller than this apply a crop which renders only part of the display, regions
+		///	larger than this create overscan which goes outside the display window.
 		///
 		/// \li <b>"projection" StringData</b><br>
 		/// The projection that determines how camera coordinates are converted to screen space
